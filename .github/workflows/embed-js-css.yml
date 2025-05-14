@@ -1,0 +1,68 @@
+name: Embed JS and CSS into HTML
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering of the workflow from the GitHub Actions UI.
+
+jobs:
+  embed-js-css:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js (or Python if you want to use a script in Python)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Step 3: Install dependencies (if needed)
+      # You can skip this step if you only want to use a simple shell script.
+
+      # Step 4: Run the script to embed JS and CSS
+      - name: Embed JS and CSS into HTML
+        run: |
+          # Define file paths
+          JS_FILE="assets/index-DmNHkT1h.js"
+          CSS_FILE="assets/index-CPFmQ_po.css"
+          HTML_FILE="index.html"
+          OUT_FILE="embedded-index.html"
+
+          # Check if the required files exist
+          if [[ ! -f "$JS_FILE" || ! -f "$CSS_FILE" || ! -f "$HTML_FILE" ]]; then
+            echo "Required files are missing!"
+            exit 1
+          fi
+
+          # Read the JS and CSS contents
+          JS_CONTENT=$(cat "$JS_FILE")
+          CSS_CONTENT=$(cat "$CSS_FILE")
+
+          # Embed the contents into the HTML file
+          awk -v js="$JS_CONTENT" -v css="$CSS_CONTENT" '{
+            if ($0 ~ /<script.*src=.*><\/script>/) {
+              print "<script type=\"module\">" js "</script>"
+            } else if ($0 ~ /<link.*rel=.stylesheet.*>/) {
+              print "<style>" css "</style>"
+            } else {
+              print $0
+            }
+          }' "$HTML_FILE" > "$OUT_FILE"
+
+          # Replace the original file (optional)
+          mv "$OUT_FILE" "$HTML_FILE"
+
+      # Step 5: Commit the changes to a new branch
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b embedded-html
+          git add index.html
+          git commit -m "Embed JS and CSS into index.html"
+          git push origin embedded-html
